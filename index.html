@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blog System Frontend</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        .section { margin-bottom: 40px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        input, textarea { width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 10px; }
+        button { padding: 10px 15px; cursor: pointer; }
+        .item { border: 1px solid #ccc; padding: 10px; margin-top: 5px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Blog System (HTML Frontend for Spring Boot API)</h1>
+
+    <!-- USERS SECTION -->
+    <div class="section">
+        <h2>Create User</h2>
+        <input id="username" placeholder="Username" />
+        <input id="email" placeholder="Email" />
+        <button onclick="createUser()">Create User</button>
+    </div>
+
+    <div class="section">
+        <h2>All Users</h2>
+        <button onclick="loadUsers()">Load Users</button>
+        <div id="users"></div>
+    </div>
+
+    <!-- POSTS SECTION -->
+    <div class="section">
+        <h2>Create Post</h2>
+        <input id="postTitle" placeholder="Title" />
+        <textarea id="postContent" placeholder="Content"></textarea>
+        <input id="postUserId" placeholder="User ID" />
+        <button onclick="createPost()">Create Post</button>
+    </div>
+
+    <div class="section">
+        <h2>All Posts</h2>
+        <button onclick="loadPosts()">Load Posts</button>
+        <div id="posts"></div>
+    </div>
+
+    <!-- COMMENTS SECTION -->
+    <div class="section">
+        <h2>Add Comment</h2>
+        <input id="commentPostId" placeholder="Post ID" />
+        <textarea id="commentText" placeholder="Comment text"></textarea>
+        <button onclick="addComment()">Add Comment</button>
+    </div>
+
+    <!-- JS API CALLS -->
+    <script>
+        const API = "http://localhost:8080/api";
+
+        function createUser() {
+            const data = {
+                username: document.getElementById("username").value,
+                email: document.getElementById("email").value
+            };
+
+            fetch(`${API}/users`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            }).then(r => r.json()).then(alert);
+        }
+
+        function loadUsers() {
+            fetch(`${API}/users`)
+                .then(r => r.json())
+                .then(users => {
+                    document.getElementById("users").innerHTML = users
+                        .map(u => `<div class='item'>ID: ${u.id} — ${u.username} (${u.email})</div>`) 
+                        .join("");
+                });
+        }
+
+        function createPost() {
+            const data = {
+                title: document.getElementById("postTitle").value,
+                content: document.getElementById("postContent").value,
+                userId: document.getElementById("postUserId").value
+            };
+
+            fetch(`${API}/posts`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            }).then(r => r.json()).then(alert);
+        }
+
+        function loadPosts() {
+            fetch(`${API}/posts`)
+                .then(r => r.json())
+                .then(posts => {
+                    document.getElementById("posts").innerHTML = posts
+                        .map(p => `<div class='item'><strong>${p.title}</strong><br>${p.content}<br>User: ${p.userId}</div>`)
+                        .join("");
+                });
+        }
+
+        function addComment() {
+            const data = {
+                postId: document.getElementById("commentPostId").value,
+                text: document.getElementById("commentText").value
+            };
+
+            fetch(`${API}/comments`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            }).then(r => r.json()).then(alert);
+        }
+    </script>
+</body>
+</html>
+
+## Complete Spring Boot RESTful API (Users, Posts, Comments)
+
+### 1. Project Structure
+```
+src/main/java/com/example/blog
+ ├── controller
+ │     ├── UserController.java
+ │     ├── PostController.java
+ │     └── CommentController.java
+ ├── service
+ │     ├── UserService.java
+ │     ├── PostService.java
+ │     └── CommentService.java
+ ├── repository
+ │     ├── UserRepository.java
+ │     ├── PostRepository.java
+ │     └── CommentRepository.java
+ ├── model
+ │     ├── User.java
+ │     ├── Post.java
+ │     └── Comment.java
+ └── BlogApplication.java
+```
+
+---
+
+### 2. Entities
+#### **User.java**
+```java
+package com.example.blog.model;
+
+import jakarta.persistence.*;
+import java.util.*;
+
+@Entity
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String username;
+    private String email;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<Post> posts = new ArrayList<>();
+
+    // Getters and Setters
+}
+```
+
+#### **Post.java**
+```java
+package com.example.blog.model;
+
+import jakarta.persistence.*;
+import java.util.*;
+
+@Entity
+public class Post {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String title;
+
+    @Column(length = 5000)
+    private String content;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL)
+    private List<Comment> comments = new ArrayList<>();
+
+    // Getters and Setters
+}
+```
+
+#### **Comment.java**
+```java
+package com.example.blog.model;
+
+import jakarta.persistence.*;
+
+@Entity
+public class Comment {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String text;
+
+    @ManyToOne
+    @JoinColumn(name = "post_id")
+    private Post post;
+
+    // Getters and Setters
+}
+```
+
+---
+
+### 3. Repositories
+#### **UserRepository.java**
+```java
+package com.example.blog.repository;
+import com.example.blog.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface UserRepository extends JpaRepository<User, Long> {}
+```
+
+#### **PostRepository.java**
+```java
+package com.example.blog.repository;
+import com.example.blog.model.Post;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface PostRepository extends JpaRepository<Post, Long> {}
+```
+
+#### **CommentRepository.java**
+```java
+package com.example.blog.repository;
+import com.example.blog.model.Comment;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface CommentRepository extends JpaRepository<Comment, Long> {}
+```
+
+---
+
+### 4. Controllers
+#### **UserController.java**
+```java
+package com.example.blog.controller;
+
+import com.example.blog.model.User;
+import com.example.blog.repository.UserRepository;
+import org.springframework.web.bind.annotation.*;
+import java.util.*;
+
+@RestController
+@RequestMapping("/api/users")
+@CrossOrigin
+public class UserController {
+
+    private final UserRepository userRepository;
+
+    public UserController(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
+    @PostMapping
+    public User create(@RequestBody User user) {
+        return userRepository.save(user);
+    }
+
+    @GetMapping
+    public List<User> getAll() {
+        return userRepository.findAll();
+    }
+}
+```
+
+#### **PostController.java**
+```java
+package com.example.blog.controller;
+
+import com.example.blog.model.Post;
+import com.example.blog.model.User;
+import com.example.blog.repository.PostRepository;
+import com.example.blog.repository.UserRepository;
+import org.springframework.web.bind.annotation.*;
+import java.util.*;
+
+@RestController
+@RequestMapping("/api/posts")
+@CrossOrigin
+public class PostController {
+
+    private final PostRepository postRepository;
+    private final UserRepository userRepository;
+
+    public PostController(PostRepository postRepository, UserRepository userRepository) {
+        this.postRepository = postRepository;
+        this.userRepository = userRepository;
+    }
+
+    @PostMapping
+    public Post create(@RequestBody Map<String, Object> body) {
+        Long userId = Long.valueOf(body.get("userId").toString());
+        String title = body.get("title").toString();
+        String content = body.get("content").toString();
+
+        User user = userRepository.findById(userId).orElseThrow();
+        Post post = new Post();
+        post.setUser(user);
+        post.setTitle(title);
+        post.setContent(content);
+        return postRepository.save(post);
+    }
+
+    @GetMapping
+    public List<Post> getAll() {
+        return postRepository.findAll();
+    }
+}
+```
+
+#### **CommentController.java**
+```java
+package com.example.blog.controller;
+
+import com.example.blog.model.Comment;
+import com.example.blog.model.Post;
+import com.example.blog.repository.CommentRepository;
+import com.example.blog.repository.PostRepository;
+import org.springframework.web.bind.annotation.*;
+import java.util.*;
+
+@RestController
+@RequestMapping("/api/comments")
+@CrossOrigin
+public class CommentController {
+
+    private final CommentRepository commentRepository;
+    private final PostRepository postRepository;
+
+    public CommentController(CommentRepository commentRepository, PostRepository postRepository) {
+        this.commentRepository = commentRepository;
+        this.postRepository = postRepository;
+    }
+
+    @PostMapping
+    public Comment create(@RequestBody Map<String, Object> body) {
+        Long postId = Long.valueOf(body.get("postId").toString());
+        String text = body.get("text").toString();
+
+        Post post = postRepository.findById(postId).orElseThrow();
+        Comment comment = new Comment();
+        comment.setPost(post);
+        comment.setText(text);
+        return commentRepository.save(comment);
+    }
+
+    @GetMapping
+    public List<Comment> getAll() {
+        return commentRepository.findAll();
+    }
+}
+```
+
+---
+
+### 5. Run Application
+#### **BlogApplication.java**
+```java
+package com.example.blog;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class BlogApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(BlogApplication.class, args);
+    }
+}
+```
+
+---
+
+Your Spring Boot REST API is now ready to run. Let me know if you'd like authentication (JWT), pagination, or database migrations added next.
